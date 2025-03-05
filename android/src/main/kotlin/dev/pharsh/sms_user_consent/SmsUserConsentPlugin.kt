@@ -49,7 +49,7 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     mActivity.registerReceiver(
                         smsVerificationReceiver,
                         intentFilter,
-                        0
+                        Context.RECEIVER_NOT_EXPORTED
                     )
                 } else {
                     mActivity.registerReceiver(
