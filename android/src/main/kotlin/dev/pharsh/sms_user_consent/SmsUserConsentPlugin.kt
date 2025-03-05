@@ -45,20 +45,18 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 // mActivity.registerReceiver(smsVerificationReceiver, IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION), SmsRetriever.SEND_PERMISSION, null);
                 // result.success(null)
                 val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                if (android.os.Build.VERSION.SDK_INT >= 33) {
                     mActivity.registerReceiver(
                         smsVerificationReceiver,
                         intentFilter,
-                        Context.RECEIVER_NOT_EXPORTED
+                        0
                     )
                 } else {
                     mActivity.registerReceiver(
                         smsVerificationReceiver,
                         intentFilter
                     )
-                }
-    
+                }   
                 result.success(null)
             }
         }
