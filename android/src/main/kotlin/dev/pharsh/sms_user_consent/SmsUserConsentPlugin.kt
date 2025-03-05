@@ -2,6 +2,8 @@ package dev.pharsh.sms_user_consent
 
 import android.app.Activity
 import android.content.*
+import android.content.Context.RECEIVER_NOT_EXPORTED
+import android.content.Context.RECEIVER_EXPORTED
 import androidx.annotation.NonNull
 import com.google.android.gms.auth.api.credentials.Credential
 import com.google.android.gms.auth.api.credentials.Credentials
