@@ -1,9 +1,157 @@
+// package dev.pharsh.sms_user_consent
+
+// import android.app.Activity
+// import android.content.*
+// import android.content.Context.RECEIVER_NOT_EXPORTED
+// import android.content.Context.RECEIVER_EXPORTED
+// import androidx.annotation.NonNull
+// import com.google.android.gms.auth.api.credentials.Credential
+// import com.google.android.gms.auth.api.credentials.Credentials
+// import com.google.android.gms.auth.api.credentials.HintRequest
+// import com.google.android.gms.auth.api.phone.SmsRetriever
+// import com.google.android.gms.common.api.CommonStatusCodes
+// import com.google.android.gms.common.api.Status
+
+// import io.flutter.embedding.engine.plugins.FlutterPlugin
+// import io.flutter.embedding.engine.plugins.activity.ActivityAware
+// import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
+// import io.flutter.plugin.common.MethodCall
+// import io.flutter.plugin.common.MethodChannel
+// import io.flutter.plugin.common.MethodChannel.MethodCallHandler
+// import io.flutter.plugin.common.MethodChannel.Result
+
+// /** SmsUserConsentPlugin */
+// class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
+//     private lateinit var channel: MethodChannel
+//     private lateinit var mActivity: Activity
+
+//     companion object {
+//         private const val CREDENTIAL_PICKER_REQUEST = 1
+//         private const val SMS_CONSENT_REQUEST = 2
+//     }
+
+//     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+//         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "sms_user_consent")
+//         channel.setMethodCallHandler(this)
+//     }
+
+//     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+//         when (call.method) {
+//             "requestPhoneNumber" -> {
+//                 requestHint()
+//                 result.success(null)
+//             }
+//             "requestSms" -> {
+//                 SmsRetriever.getClient(mActivity.applicationContext).startSmsUserConsent(call.argument<String>("senderPhoneNumber"))
+
+//                 // mActivity.registerReceiver(smsVerificationReceiver, IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION), SmsRetriever.SEND_PERMISSION, null);
+//                 // result.success(null)
+//                 val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+//                 if (android.os.Build.VERSION.SDK_INT >= 33) {
+//                     mActivity.registerReceiver(
+//                         smsVerificationReceiver,
+//                         intentFilter,
+//                         Context.RECEIVER_NOT_EXPORTED
+//                     )
+//                 } else {
+//                     mActivity.registerReceiver(
+//                         smsVerificationReceiver,
+//                         intentFilter
+//                     )
+//                 }   
+//                 result.success(null)
+//             }
+//         }
+//     }
+
+//     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+//         channel.setMethodCallHandler(null)
+//     }
+
+//     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+//         mActivity = binding.activity
+
+//         binding.addActivityResultListener { requestCode, resultCode, data ->
+//             when (requestCode) {
+//                 CREDENTIAL_PICKER_REQUEST -> {// Obtain the phone number from the result
+//                     if (resultCode == Activity.RESULT_OK && data != null) {
+//                         channel.invokeMethod("selectedPhoneNumber", data.getParcelableExtra<Credential>(Credential.EXTRA_KEY)?.id)
+//                     } else {
+//                         channel.invokeMethod("selectedPhoneNumber", null)
+//                     }
+//                     true
+//                 }
+//                 SMS_CONSENT_REQUEST -> {// Obtain the phone number from the result
+//                     if (resultCode == Activity.RESULT_OK && data != null) {
+//                         channel
+//                                 .invokeMethod("receivedSms", data.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE))
+//                         mActivity.unregisterReceiver(smsVerificationReceiver)
+//                     } else {
+//                         // Consent denied. User can type OTC manually.
+//                         channel.invokeMethod("receivedSms", null)
+//                         mActivity.unregisterReceiver(smsVerificationReceiver)
+//                     }
+//                     true
+//                 }
+//                 else -> false
+//             }
+//         }
+//     }
+
+//     override fun onDetachedFromActivityForConfigChanges() {}
+
+//     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {}
+
+//     override fun onDetachedFromActivity() {}
+
+//     /// Construct a request for phone numbers and show the picker
+//     private fun requestHint() {
+//         mActivity.startIntentSenderForResult(
+//                 Credentials.getClient(mActivity).getHintPickerIntent(HintRequest.Builder()
+//                         .setPhoneNumberIdentifierSupported(true)
+//                         .build()).intentSender,
+//                 CREDENTIAL_PICKER_REQUEST,
+//                 null, 0, 0, 0
+//         )
+//     }
+
+//     private val smsVerificationReceiver = object : BroadcastReceiver() {
+//         override fun onReceive(context: Context, intent: Intent) {
+//             if (SmsRetriever.SMS_RETRIEVED_ACTION == intent.action) {
+//                 val extras = intent.extras
+//                 val smsRetrieverStatus = extras?.get(SmsRetriever.EXTRA_STATUS) as Status
+
+//                 when (smsRetrieverStatus.statusCode) {
+//                     CommonStatusCodes.SUCCESS -> {
+//                         // Get consent intent
+//                         try {
+//                             // Start activity to show consent dialog to user, activity must be started in
+//                             // 5 minutes, otherwise you'll receive another TIMEOUT intent
+//                             mActivity.startActivityForResult(extras.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT), SMS_CONSENT_REQUEST)
+//                         } catch (e: ActivityNotFoundException) {
+//                             // Handle the exception ...
+//                         }
+//                     }
+//                     CommonStatusCodes.TIMEOUT -> {
+//                         // Time out occurred, handle the error.
+//                     }
+//                 }
+//             }
+//         }
+
+// reenginering
+
 package dev.pharsh.sms_user_consent
 
 import android.app.Activity
-import android.content.*
-import android.content.Context.RECEIVER_NOT_EXPORTED
-import android.content.Context.RECEIVER_EXPORTED
+import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.Bundle
+import android.os.Parcelable
 import androidx.annotation.NonNull
 import com.google.android.gms.auth.api.credentials.Credential
 import com.google.android.gms.auth.api.credentials.Credentials
@@ -11,7 +159,6 @@ import com.google.android.gms.auth.api.credentials.HintRequest
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
-
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -22,6 +169,7 @@ import io.flutter.plugin.common.MethodChannel.Result
 
 /** SmsUserConsentPlugin */
 class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
+
     private lateinit var channel: MethodChannel
     private lateinit var mActivity: Activity
 
@@ -30,69 +178,148 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         private const val SMS_CONSENT_REQUEST = 2
     }
 
-    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "sms_user_consent")
+    override fun onAttachedToEngine(
+        @NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding
+    ) {
+        channel = MethodChannel(
+            flutterPluginBinding.binaryMessenger,
+            "sms_user_consent"
+        )
         channel.setMethodCallHandler(this)
     }
 
-    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+    override fun onMethodCall(
+        @NonNull call: MethodCall,
+        @NonNull result: Result
+    ) {
         when (call.method) {
+
             "requestPhoneNumber" -> {
                 requestHint()
                 result.success(null)
             }
-            "requestSms" -> {
-                SmsRetriever.getClient(mActivity.applicationContext).startSmsUserConsent(call.argument<String>("senderPhoneNumber"))
 
-                // mActivity.registerReceiver(smsVerificationReceiver, IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION), SmsRetriever.SEND_PERMISSION, null);
-                // result.success(null)
-                val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-                if (android.os.Build.VERSION.SDK_INT >= 33) {
+            "requestSms" -> {
+
+                SmsRetriever
+                    .getClient(mActivity.applicationContext)
+                    .startSmsUserConsent(
+                        call.argument<String>("senderPhoneNumber")
+                    )
+
+                val intentFilter =
+                    IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
                     mActivity.registerReceiver(
                         smsVerificationReceiver,
                         intentFilter,
                         Context.RECEIVER_NOT_EXPORTED
                     )
+
                 } else {
+
+                    @Suppress("DEPRECATION")
                     mActivity.registerReceiver(
                         smsVerificationReceiver,
                         intentFilter
                     )
-                }   
+                }
+
                 result.success(null)
             }
+
+            else -> result.notImplemented()
         }
     }
 
-    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onDetachedFromEngine(
+        @NonNull binding: FlutterPlugin.FlutterPluginBinding
+    ) {
         channel.setMethodCallHandler(null)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+
         mActivity = binding.activity
 
         binding.addActivityResultListener { requestCode, resultCode, data ->
+
             when (requestCode) {
-                CREDENTIAL_PICKER_REQUEST -> {// Obtain the phone number from the result
+
+                CREDENTIAL_PICKER_REQUEST -> {
+
                     if (resultCode == Activity.RESULT_OK && data != null) {
-                        channel.invokeMethod("selectedPhoneNumber", data.getParcelableExtra<Credential>(Credential.EXTRA_KEY)?.id)
+
+                        val credential =
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+                                data.getParcelableExtra(
+                                    Credential.EXTRA_KEY,
+                                    Credential::class.java
+                                )
+
+                            } else {
+
+                                @Suppress("DEPRECATION")
+                                data.getParcelableExtra<Credential>(
+                                    Credential.EXTRA_KEY
+                                )
+                            }
+
+                        channel.invokeMethod(
+                            "selectedPhoneNumber",
+                            credential?.id
+                        )
+
                     } else {
-                        channel.invokeMethod("selectedPhoneNumber", null)
+
+                        channel.invokeMethod(
+                            "selectedPhoneNumber",
+                            null
+                        )
                     }
+
                     true
                 }
-                SMS_CONSENT_REQUEST -> {// Obtain the phone number from the result
+
+                SMS_CONSENT_REQUEST -> {
+
                     if (resultCode == Activity.RESULT_OK && data != null) {
-                        channel
-                                .invokeMethod("receivedSms", data.getStringExtra(SmsRetriever.EXTRA_SMS_MESSAGE))
-                        mActivity.unregisterReceiver(smsVerificationReceiver)
+
+                        channel.invokeMethod(
+                            "receivedSms",
+                            data.getStringExtra(
+                                SmsRetriever.EXTRA_SMS_MESSAGE
+                            )
+                        )
+
+                        try {
+                            mActivity.unregisterReceiver(
+                                smsVerificationReceiver
+                            )
+                        } catch (_: Exception) {
+                        }
+
                     } else {
-                        // Consent denied. User can type OTC manually.
-                        channel.invokeMethod("receivedSms", null)
-                        mActivity.unregisterReceiver(smsVerificationReceiver)
+
+                        channel.invokeMethod(
+                            "receivedSms",
+                            null
+                        )
+
+                        try {
+                            mActivity.unregisterReceiver(
+                                smsVerificationReceiver
+                            )
+                        } catch (_: Exception) {
+                        }
                     }
+
                     true
                 }
+
                 else -> false
             }
         }
@@ -100,43 +327,100 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
     override fun onDetachedFromActivityForConfigChanges() {}
 
-    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {}
+    override fun onReattachedToActivityForConfigChanges(
+        binding: ActivityPluginBinding
+    ) {
+    }
 
     override fun onDetachedFromActivity() {}
 
     /// Construct a request for phone numbers and show the picker
     private fun requestHint() {
+
+        val hintRequest = HintRequest.Builder()
+            .setPhoneNumberIdentifierSupported(true)
+            .build()
+
         mActivity.startIntentSenderForResult(
-                Credentials.getClient(mActivity).getHintPickerIntent(HintRequest.Builder()
-                        .setPhoneNumberIdentifierSupported(true)
-                        .build()).intentSender,
-                CREDENTIAL_PICKER_REQUEST,
-                null, 0, 0, 0
+            Credentials.getClient(mActivity)
+                .getHintPickerIntent(hintRequest)
+                .intentSender,
+            CREDENTIAL_PICKER_REQUEST,
+            null,
+            0,
+            0,
+            0
         )
     }
 
     private val smsVerificationReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (SmsRetriever.SMS_RETRIEVED_ACTION == intent.action) {
-                val extras = intent.extras
-                val smsRetrieverStatus = extras?.get(SmsRetriever.EXTRA_STATUS) as Status
 
-                when (smsRetrieverStatus.statusCode) {
+        override fun onReceive(
+            context: Context,
+            intent: Intent
+        ) {
+
+            if (SmsRetriever.SMS_RETRIEVED_ACTION == intent.action) {
+
+                val extras = intent.extras
+
+                val smsRetrieverStatus: Status? =
+                    extras.parcelable(
+                        SmsRetriever.EXTRA_STATUS,
+                        Status::class.java
+                    )
+
+                when (smsRetrieverStatus?.statusCode) {
+
                     CommonStatusCodes.SUCCESS -> {
-                        // Get consent intent
+
                         try {
-                            // Start activity to show consent dialog to user, activity must be started in
-                            // 5 minutes, otherwise you'll receive another TIMEOUT intent
-                            mActivity.startActivityForResult(extras.getParcelable(SmsRetriever.EXTRA_CONSENT_INTENT), SMS_CONSENT_REQUEST)
-                        } catch (e: ActivityNotFoundException) {
-                            // Handle the exception ...
+
+                            val consentIntent: Intent? =
+                                extras.parcelable(
+                                    SmsRetriever.EXTRA_CONSENT_INTENT,
+                                    Intent::class.java
+                                )
+
+                            if (consentIntent != null) {
+
+                                @Suppress("DEPRECATION")
+                                mActivity.startActivityForResult(
+                                    consentIntent,
+                                    SMS_CONSENT_REQUEST
+                                )
+                            }
+
+                        } catch (_: ActivityNotFoundException) {
                         }
                     }
+
                     CommonStatusCodes.TIMEOUT -> {
-                        // Time out occurred, handle the error.
+                        // Timeout
                     }
                 }
             }
         }
     }
+
+    private fun <T : Parcelable> Bundle?.parcelable(
+        key: String,
+        clazz: Class<T>
+    ): T? {
+
+        if (this == null) return null
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+            getParcelable(key, clazz)
+
+        } else {
+
+            @Suppress("DEPRECATION")
+            getParcelable(key)
+        }
+    }
 }
+
+//     }
+// }
